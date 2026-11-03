@@ -1,101 +1,78 @@
-# AuthForge — Secure Authentication API
+# AuthForge
 
-API REST de autenticação e gestão de contas construída com Java 21 e Spring Boot 4.1.2. O projeto demonstra autenticação stateless, JWT de curta duração, refresh tokens rotativos, autorização por papéis e persistência PostgreSQL.
+API REST para cadastro de contas, autenticação e administração básica de usuários. Foi construída com Java 21, Spring Boot, Spring Security e PostgreSQL.
 
-> Projeto de portfólio. Antes de uma utilização comercial, revise os requisitos de segurança, privacidade, disponibilidade e operação do ambiente de destino.
+O ponto central do projeto é o ciclo de vida dos tokens: o JWT de acesso dura pouco; o refresh token é opaco, armazenado como hash e substituído a cada uso.
 
-## Funcionalidades
+## Decisões de segurança
 
-- Cadastro e login com validação de entrada e hash de senha BCrypt (work factor 12).
-- Access tokens JWT HS512 com emissor, expiração e finalidade validados.
-- Refresh tokens opacos de alta entropia; somente o hash SHA-256 é armazenado no banco.
-- Rotação de refresh token a cada uso e revogação da família quando ocorre reutilização.
-- Logout com revogação da família de sessão.
-- Papéis USER e ADMIN; o cadastro público sempre cria USER.
-- Criação opcional do primeiro administrador por variáveis de ambiente, sem credenciais padrão.
-- Administração para listar contas e habilitar, desabilitar ou bloquear usuários. Desabilitar/bloquear também revoga refresh tokens.
-- PostgreSQL com migrações Flyway e perfil de teste H2.
-- CORS configurável, respostas de erro padronizadas, Actuator Health e Swagger/OpenAPI.
-- Dockerfile com runtime não-root e Docker Compose para API + PostgreSQL.
+- Senhas são armazenadas com BCrypt (work factor 12).
+- Access tokens JWT usam HS512, emissor, expiração e a claim `token_use=access`.
+- Cada refresh token é gerado com 64 bytes aleatórios. O banco recebe somente o SHA-256 do valor entregue ao cliente.
+- Refresh tokens pertencem a uma família. Ao detectar a reutilização de um token já rotacionado, a API revoga os tokens ainda ativos daquela família.
+- O cadastro público sempre cria uma conta `USER`; não existe parâmetro para o cliente escolher `ADMIN`.
+- A primeira conta administrativa só é criada quando email e senha são configurados explicitamente no ambiente.
 
-## Stack
+Essas escolhas reduzem alguns riscos comuns, mas não transformam o projeto em um provedor de identidade pronto para produção.
 
-Java 21 · Spring Boot 4.1.2 · Spring Security · Spring Data JPA · PostgreSQL · Flyway · JWT/Nimbus · springdoc-openapi 3.2.0 · Gradle · JUnit 6.
+## Endpoints
+
+| Método | Rota | Acesso | Função |
+|---|---|---|---|
+| POST | `/api/v1/auth/register` | Público | Criar conta e emitir tokens |
+| POST | `/api/v1/auth/login` | Público | Autenticar |
+| POST | `/api/v1/auth/refresh` | Público, com refresh token | Rotacionar a sessão |
+| POST | `/api/v1/auth/logout` | Público, com refresh token | Revogar a família da sessão |
+| GET | `/api/v1/users/me` | USER / ADMIN | Consultar a própria conta |
+| GET | `/api/v1/admin/users` | ADMIN | Listar contas |
+| GET | `/api/v1/admin/users/{id}` | ADMIN | Consultar uma conta |
+| PATCH | `/api/v1/admin/users/{id}/status` | ADMIN | Habilitar, desabilitar ou bloquear |
+
+Os endpoints protegidos recebem `Authorization: Bearer <accessToken>`. Refresh e logout recebem `{"refreshToken":"..." }` no corpo JSON.
 
 ## Executar localmente
 
-Pré-requisitos: JDK 21 e PostgreSQL 15+.
-
-Crie um banco e usuário PostgreSQL para a aplicação. No PowerShell, configure:
+Requisitos: JDK 21 e PostgreSQL. Configure a conexão e gere um segredo JWT antes de iniciar:
 
 ```powershell
 $env:DATABASE_URL = "jdbc:postgresql://localhost:5432/authforge"
 $env:DATABASE_USERNAME = "authforge"
-$env:DATABASE_PASSWORD = "sua-"
+$env:DATABASE_PASSWORD = ""
 
-# Gera 64 bytes aleatórios e codifica em Base64. Não reutilize este segredo entre ambientes.
-$env:JWT_SECRET_BASE64 = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(64))
+$env:JWT_SECRET_BASE64 = [Convert]::ToBase64String(
+    [Security.Cryptography.RandomNumberGenerator]::GetBytes(64)
+)
 $env:JWT_ISSUER = "authforge"
 $env:CORS_ALLOWED_ORIGINS = "http://localhost:3000"
 
-# Opcional: configure os dois valores para criar o primeiro administrador.
+# Opcional: informe os dois valores para criar o primeiro ADMIN.
 $env:BOOTSTRAP_ADMIN_EMAIL = "admin@seudominio.com"
 $env:BOOTSTRAP_ADMIN_PASSWORD = "REMOVED_FROM_PUBLIC_HISTORY"
+
+.\gradlew.bat bootRun
 ```
 
-Execute:
+Swagger UI: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html). A migração Flyway é aplicada na inicialização.
 
-```powershell
-.gradlew.bat bootRun
-```
-
-As migrações são aplicadas automaticamente. API: `http://localhost:8080`. Swagger UI: `http://localhost:8080/swagger-ui.html`. OpenAPI JSON: `http://localhost:8080/v3/api-docs`.
-
-## Executar com Docker Compose
+## Docker Compose
 
 ```powershell
 Copy-Item .env.example .env
-# Edite .env e defina senhas fortes, JWT_SECRET_BASE64 e, se aplicável, o administrador inicial.
+# Edite .env: defina senhas próprias e JWT_SECRET_BASE64.
 docker compose up --build -d
 docker compose logs -f api
 ```
 
-Não publique o arquivo `.env`. O segredo JWT precisa decodificar para pelo menos 64 bytes. Use um gerenciador de segredos em ambientes hospedados.
+Não versione o arquivo `.env`. A chave precisa decodificar para pelo menos 64 bytes aleatórios.
 
-## Endpoints
-
-| Método | Endpoint | Acesso | Descrição |
-|---|---|---|---|
-| POST | `/api/v1/auth/register` | Público | Criar conta USER e emitir tokens |
-| POST | `/api/v1/auth/login` | Público | Autenticar e emitir tokens |
-| POST | `/api/v1/auth/refresh` | Público | Rotacionar refresh token |
-| POST | `/api/v1/auth/logout` | Público com refresh token | Revogar sessão |
-| GET | `/api/v1/users/me` | USER/ADMIN | Consultar conta autenticada |
-| GET | `/api/v1/admin/users` | ADMIN | Listar contas |
-| GET | `/api/v1/admin/users/{id}` | ADMIN | Consultar conta |
-| PATCH | `/api/v1/admin/users/{id}/status` | ADMIN | Habilitar, desabilitar ou bloquear conta |
-| GET | `/actuator/health` | Público | Estado de saúde da aplicação |
-
-Os endpoints de autenticação recebem e retornam JSON. Os endpoints protegidos recebem `Authorization: Bearer <accessToken>`. O refresh token é enviado no corpo JSON como `{"refreshToken":"..."}`.
-
-## Executar os testes
+## Testes
 
 ```powershell
-.gradlew.bat clean test
+.\gradlew.bat clean test
 ```
 
-Os testes usam H2 em memória e aplicam as mesmas migrações Flyway. Não precisam de PostgreSQL em execução. A suíte cobre cadastro, validação, duplicidade case-insensitive, acesso autenticado, papéis, bootstrap admin, rotação e reutilização de refresh token, logout e revogação após bloqueio de conta.
+A suíte usa H2 em memória e executa a migração Flyway. Os dez testes cobrem cadastro, validação, papéis, login, rotação e reutilização de refresh token, logout e revogação após bloqueio de conta. A execução com PostgreSQL em container ainda precisa ser validada em um ambiente com Docker Engine ativo.
 
-## Modelo de segurança
+## Limites antes de produção
 
-O access token tem duração padrão de 10 minutos. O refresh token tem duração padrão de 7 dias e é renovado a cada utilização. O banco armazena apenas o SHA-256 do refresh token, não o valor que o cliente apresenta. A detecção de reutilização revoga os tokens não revogados da mesma família.
-
-O segredo JWT não possui valor padrão funcional: sem `JWT_SECRET_BASE64` válido, a aplicação não inicia. Ele deve ser gerado com fonte criptograficamente segura e mantido fora do repositório. O cadastro público nunca permite escolher papéis. O administrador inicial só é criado quando email e senha são fornecidos explicitamente; a senha precisa ter pelo menos 16 caracteres.
-
-## Limitações conhecidas e próximos passos para produção
-
-Esta implementação não inclui fluxo de recuperação de senha, confirmação de email, MFA, gestão de dispositivos, auditoria imutável ou rate limiting interno. Antes de produção, adicione esses controles conforme o risco, TLS na borda, proteção contra abuso no gateway, gestão/rotação de segredos, backups testados, monitoramento, política de retenção e testes de carga. Tokens de acesso já emitidos continuam válidos até expirarem; mantenha a vida útil curta.
-
-## Licença
-
-MIT. Consulte [LICENSE](LICENSE).
+Ainda não há confirmação de e-mail, recuperação de senha, MFA, rate limiting na aplicação, gestão de dispositivos ou trilha de auditoria imutável. Um access token já emitido continua válido até expirar, mesmo após o usuário ser bloqueado; por isso a duração padrão é de dez minutos. Também são necessários TLS, gestão de segredos, backups testados, monitoramento e testes de carga no ambiente de destino.

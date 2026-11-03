@@ -26,60 +26,60 @@ public class ApiExceptionHandler {
         Map<String, String> fields = exception.getBindingResult().getFieldErrors().stream()
             .collect(Collectors.toMap(
                 FieldError::getField,
-                error -> Optional.ofNullable(error.getDefaultMessage()).orElse("Invalid value."),
+                error -> Optional.ofNullable(error.getDefaultMessage()).orElse("Valor inválido."),
                 (first, second) -> first,
                 LinkedHashMap::new
             ));
         return response(HttpStatus.BAD_REQUEST, "VALIDATION_FAILED",
-            "One or more request fields are invalid.", request, fields);
+            "Um ou mais campos da requisição são inválidos.", request, fields);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleUnreadableBody(HttpServletRequest request) {
         return response(HttpStatus.BAD_REQUEST, "INVALID_REQUEST_BODY",
-            "The request body is missing or malformed.", request, Map.of());
+            "O corpo da requisição está ausente ou malformado.", request, Map.of());
     }
 
     @ExceptionHandler(EmailAlreadyUsedException.class)
     public ResponseEntity<ApiError> handleDuplicateEmail(HttpServletRequest request) {
         return response(HttpStatus.CONFLICT, "EMAIL_ALREADY_EXISTS",
-            "An account already exists for this email address.", request, Map.of());
+            "Já existe uma conta cadastrada com este e-mail.", request, Map.of());
     }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ApiError> handleCredentials(HttpServletRequest request) {
         return response(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS",
-            "Email or password is incorrect.", request, Map.of());
+            "E-mail ou senha incorretos.", request, Map.of());
     }
 
     @ExceptionHandler(RefreshTokenReuseException.class)
     public ResponseEntity<ApiError> handleRefreshReuse(HttpServletRequest request) {
         return response(HttpStatus.UNAUTHORIZED, "REFRESH_TOKEN_REUSE",
-            "Refresh token reuse was detected. Sign in again.", request, Map.of());
+            "Foi detectada a reutilização de um refresh token. Entre novamente.", request, Map.of());
     }
 
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ApiError> handleRefreshToken(HttpServletRequest request) {
         return response(HttpStatus.UNAUTHORIZED, "INVALID_REFRESH_TOKEN",
-            "The refresh token is invalid, expired, or revoked.", request, Map.of());
+            "O refresh token é inválido, expirou ou foi revogado.", request, Map.of());
     }
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(HttpServletRequest request) {
         return response(HttpStatus.NOT_FOUND, "USER_NOT_FOUND",
-            "The requested user does not exist.", request, Map.of());
+            "A conta solicitada não existe.", request, Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleConflict(HttpServletRequest request) {
         return response(HttpStatus.CONFLICT, "DATA_CONFLICT",
-            "The request conflicts with existing data.", request, Map.of());
+            "A operação entra em conflito com os dados existentes.", request, Map.of());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleUnexpected(HttpServletRequest request) {
         return response(HttpStatus.INTERNAL_SERVER_ERROR, "INTERNAL_ERROR",
-            "An unexpected server error occurred.", request, Map.of());
+            "Ocorreu um erro interno inesperado.", request, Map.of());
     }
 
     private ResponseEntity<ApiError> response(

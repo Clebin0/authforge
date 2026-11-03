@@ -1,20 +1,20 @@
-# Security Policy
+# Política de segurança
 
-## Reporting a vulnerability
+## Comunicar uma vulnerabilidade
 
-Do not report security vulnerabilities in public issues. Contact the repository maintainer privately through the GitHub profile and include reproduction steps, impact, and affected versions.
+Não publique detalhes de uma vulnerabilidade em uma issue aberta. Entre em contato com o mantenedor pelo perfil do GitHub e inclua os passos para reproduzir o problema, o impacto observado e a versão afetada. Não envie senhas, tokens ou dados pessoais no relato.
 
-## Security controls
+## Controles existentes
 
-- Passwords are hashed with BCrypt (work factor 12).
-- Access tokens are signed with HS512 and require a Base64 secret containing at least 64 random bytes.
-- Refresh tokens are random opaque values. Only SHA-256 hashes are persisted.
-- Refresh tokens rotate on use. Reuse of an already-rotated token revokes its token family.
-- Registration can only assign the USER role. The first ADMIN account is created only through explicit environment configuration.
-- API errors do not include stack traces or submitted credentials.
-- Database schema changes are managed by Flyway migrations.
-- CORS origins are configured explicitly.
+- Senhas com hash BCrypt (work factor 12).
+- JWT de acesso assinado com HS512 e segredo Base64 de pelo menos 64 bytes aleatórios.
+- Refresh tokens opacos; somente hashes SHA-256 são persistidos.
+- Rotação de refresh token e revogação da família em caso de reutilização.
+- Cadastro público restrito ao papel USER.
+- Criação de ADMIN somente por configuração explícita de ambiente.
+- CORS com origens configuradas; respostas de erro não incluem stack trace nem credenciais.
+- Alterações de esquema versionadas com Flyway.
 
-## Deployment requirements
+## Antes de expor a API
 
-Use TLS at the ingress, keep secrets in a managed secret store, rotate the database password, restrict database network access, and configure rate limiting at the gateway or reverse proxy. Do not expose Actuator environment, configuration, or metrics endpoints publicly.
+Use TLS, mantenha os segredos fora do repositório, restrinja o acesso à rede do banco e configure rate limiting no gateway ou proxy reverso. Não exponha endpoints de configuração, ambiente ou métricas do Actuator. Faça testes de restauração dos backups e defina monitoramento e retenção de dados.

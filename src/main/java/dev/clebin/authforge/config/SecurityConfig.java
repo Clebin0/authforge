@@ -46,14 +46,14 @@ public class SecurityConfig {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                     response.getWriter().write(
-                        "{\"status\":401,\"code\":\"UNAUTHORIZED\",\"message\":\"Authentication is required.\"}"
+                        "{\"status\":401,\"code\":\"UNAUTHORIZED\",\"message\":\"É necessário autenticar para acessar este recurso.\"}"
                     );
                 })
                 .accessDeniedHandler((request, response, exception) -> {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType(MediaType.APPLICATION_JSON_VALUE);
                     response.getWriter().write(
-                        "{\"status\":403,\"code\":\"FORBIDDEN\",\"message\":\"You do not have permission to access this resource.\"}"
+                        "{\"status\":403,\"code\":\"FORBIDDEN\",\"message\":\"Sua conta não tem permissão para acessar este recurso.\"}"
                     );
                 })
             )

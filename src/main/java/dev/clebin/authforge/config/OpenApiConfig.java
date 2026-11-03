@@ -17,7 +17,7 @@ public class OpenApiConfig {
             .info(new Info()
                 .title("AuthForge API")
                 .version("1.0.0")
-                .description("Authentication and account API with short-lived JWT access tokens and rotating refresh tokens.")
+                .description("API para cadastro, autenticação e administração de contas. Usa JWT de curta duração e refresh tokens com rotação.")
                 .contact(new Contact().name("Clebin0").url("https://github.com/Clebin0")))
             .components(new Components().addSecuritySchemes(
                 "bearerAuth",
