@@ -37,7 +37,7 @@ Requisitos: JDK 21 e PostgreSQL. Configure a conexão e gere um segredo JWT ante
 ```powershell
 $env:DATABASE_URL = "jdbc:postgresql://localhost:5432/authforge"
 $env:DATABASE_USERNAME = "authforge"
-$env:DATABASE_PASSWORD = ""
+$env:DATABASE_PASSWORD = Read-Host "Defina a senha local do banco (nao salve no repositorio)"
 
 $env:JWT_SECRET_BASE64 = [Convert]::ToBase64String(
     [Security.Cryptography.RandomNumberGenerator]::GetBytes(64)
@@ -45,9 +45,8 @@ $env:JWT_SECRET_BASE64 = [Convert]::ToBase64String(
 $env:JWT_ISSUER = "authforge"
 $env:CORS_ALLOWED_ORIGINS = "http://localhost:3000"
 
-# Opcional: informe os dois valores para criar o primeiro ADMIN.
-$env:BOOTSTRAP_ADMIN_EMAIL = "admin@seudominio.com"
-$env:BOOTSTRAP_ADMIN_PASSWORD = "REMOVED_FROM_PUBLIC_HISTORY"
+# Opcional: configure BOOTSTRAP_ADMIN_EMAIL e BOOTSTRAP_ADMIN_PASSWORD
+# usando variaveis privadas do ambiente, somente durante o provisionamento inicial.
 
 .\gradlew.bat bootRun
 ```
